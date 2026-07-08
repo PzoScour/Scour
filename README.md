@@ -1,12 +1,12 @@
 # Parts Hunter (Scour)
 
-Consumer web app that searches multiple retailers/marketplaces for the cheapest reliable price on a specific auto part. See [`parts-hunter-project-brief.md`](./parts-hunter-project-brief.md) for full product scope, architecture, and data sources, and [`parts-hunter.html`](./parts-hunter.html) for the visual/interaction reference prototype.
+Consumer web app that searches multiple retailers/marketplaces for the cheapest reliable price on a specific auto part. See [`parts-hunter-project-brief.md`](./parts-hunter-project-brief.md) for full product scope, architecture, and data sources, and [`index.html`](./index.html) for the visual/interaction reference prototype.
 
 **Status:** Pre-development / API access pending.
 
 ## Repo layout
 
-- `parts-hunter.html` — standalone HTML/CSS prototype establishing the visual identity
+- `index.html` — standalone HTML/CSS prototype establishing the visual identity (also serves as the site root for deployment)
 - `parts-hunter-project-brief.md` — product brief and technical spec
 - `backend/` — Node.js API client scripts (eBay, Amazon)
 

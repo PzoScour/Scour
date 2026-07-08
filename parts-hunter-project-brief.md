@@ -120,7 +120,7 @@ Expand coverage once real usage data shows what people are actually searching fo
 
 ## 9. Design reference
 
-An HTML/CSS prototype already exists (`parts-hunter.html`) establishing the visual identity — reuse this styling rather than redesigning from scratch:
+An HTML/CSS prototype already exists (`index.html`) establishing the visual identity — reuse this styling rather than redesigning from scratch:
 
 - **Concept:** styled like a mechanic's work order / parts ticket, not a generic search app
 - **Palette:** graphite background (`#181B1F`), panel gray (`#21252B`), safety amber accent (`#FF9F1C`), blueprint blue secondary (`#5B8DEF`), green for "cheapest" (`#4CAF6D`)
@@ -156,4 +156,4 @@ Affiliate commission model — we route users to the retailer's site to complete
 
 ---
 
-*This brief is meant to be handed to Claude Code as the starting spec for development. Attach `parts-hunter.html` alongside it as the visual/interaction reference.*
+*This brief is meant to be handed to Claude Code as the starting spec for development. Attach `index.html` alongside it as the visual/interaction reference.*
