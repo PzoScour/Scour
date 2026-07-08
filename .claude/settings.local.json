@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npm --version)",
+      "PowerShell(npm *)",
+      "PowerShell(py *)",
+      "PowerShell(winget *)",
+      "PowerShell(node --version)",
+      "PowerShell(npm install *)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\Luke\\\\Documents\\\\Scour\\\\backend\"; node testSearch.js \"brake pads\")",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Set-Location \"C:\\\\Users\\\\Luke\\\\Documents\\\\Scour\\\\backend\"; node testAmazonSearch.js \"brake pads\")",
+      "WebFetch(domain:webservices.amazon.com)",
+      "WebFetch(domain:affiliate-program.amazon.com)"
+    ]
+  }
+}

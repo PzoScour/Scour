@@ -1,0 +1,13 @@
+{
+  "name": "parts-hunter-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:ebay": "node testSearch.js",
+    "test:amazon": "node testAmazonSearch.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.0.0"
+  }
+}
