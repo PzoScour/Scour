@@ -1,4 +1,4 @@
-# Parts Hunter — Project Brief
+# Scour — Project Brief
 
 **Status:** Pre-development / API access pending
 **Last updated:** July 2026
@@ -7,7 +7,7 @@
 
 ## 1. What this is
 
-Parts Hunter is a consumer web app that helps car owners find the cheapest reliable price for a specific auto part. A user enters their vehicle (year/make/model) and the part they need, and the app searches multiple retailers/marketplaces and returns ranked results by price, condition, and reliability — so the person doesn't have to manually check five different sites.
+Scour is a consumer web app that helps car owners find the cheapest reliable price for a specific auto part. A user enters their vehicle (year/make/model) and the part they need, and the app searches multiple retailers/marketplaces and returns ranked results by price, condition, and reliability — so the person doesn't have to manually check five different sites.
 
 **One-line pitch:** "Enter your car and the part you need. We find every price so you don't have to."
 

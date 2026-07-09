@@ -1,4 +1,4 @@
-# Parts Hunter (Scour)
+# Scour
 
 Consumer web app that searches multiple retailers/marketplaces for the cheapest reliable price on a specific auto part. See [`parts-hunter-project-brief.md`](./parts-hunter-project-brief.md) for full product scope, architecture, and data sources, and [`index.html`](./index.html) for the visual/interaction reference prototype.
 
