@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: scour
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: EBAY_ENV
+        value: production
+      - key: EBAY_APP_ID
+        sync: false
+      - key: EBAY_DEV_ID
+        sync: false
+      - key: EBAY_CERT_ID
+        sync: false
