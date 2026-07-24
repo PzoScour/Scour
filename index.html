@@ -296,6 +296,15 @@
     letter-spacing:.01em;
     padding-right:16px;
   }
+  .item-title{
+    font-size:12.5px;
+    color:var(--text-dim);
+    line-height:1.35;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
   .condition{
     font-family:'IBM Plex Mono',monospace;
     font-size:10.5px;
@@ -433,7 +442,7 @@
   <div class="empty" id="empty">No part or vehicle entered yet — fill out the work order above and hit Find Parts.</div>
 
   <div class="disclaimer">
-    <b>Prototype note:</b> This demo simulates realistic multi-retailer results (RockAuto, AutoZone, O'Reilly, Advance Auto Parts, NAPA, PartsGeek, eBay Motors, Amazon, CarParts.com, and local salvage yards) based on your vehicle and part — it isn't pulling live prices yet. The same search always returns the same results, so you can see how ranking and badges behave. A production version would swap the generator below for real retailer APIs / scrapers.
+    <b>Prototype note:</b> Results are live listings pulled from the eBay Browse API. The scan animation above still lists other retailers (RockAuto, AutoZone, O'Reilly, Advance Auto Parts, NAPA, PartsGeek, Amazon, CarParts.com, local salvage yards) as a placeholder for sources we don't have API access to yet — those aren't reflected in the results below.
   </div>
 
   <div style="margin-top:16px; text-align:center; font-size:11px; color:var(--text-faint);">
@@ -454,67 +463,6 @@
     {name:"Amazon Automotive", trust:0.85, shipMin:1, shipMax:3, tag:"marketplace"},
     {name:"CarParts.com", trust:0.83, shipMin:2, shipMax:6, tag:"marketplace"},
     {name:"Riverside Salvage & Auto", trust:0.68, shipMin:0, shipMax:2, tag:"salvage"},
-  ];
-
-  // base price [low, high] by part keyword, in USD, "new aftermarket" tier
-  const PART_PRICES = [
-    [/brake\s*pad/i,        [28, 85]],
-    [/brake\s*rotor|disc/i, [35, 120]],
-    [/caliper/i,            [45, 160]],
-    [/alternator/i,         [90, 320]],
-    [/starter/i,            [70, 260]],
-    [/battery/i,            [90, 230]],
-    [/radiator/i,           [80, 280]],
-    [/water\s*pump/i,       [35, 140]],
-    [/spark\s*plug/i,       [4, 16]],
-    [/air\s*filter/i,       [9, 32]],
-    [/oil\s*filter/i,       [5, 18]],
-    [/headlight|head\s*lamp/i, [35, 220]],
-    [/tail\s*light/i,       [25, 140]],
-    [/bumper/i,             [90, 380]],
-    [/mirror/i,             [25, 130]],
-    [/catalytic\s*converter/i, [120, 650]],
-    [/timing\s*belt/i,      [20, 90]],
-    [/serpentine\s*belt/i,  [12, 45]],
-    [/control\s*arm/i,      [30, 140]],
-    [/strut|shock/i,        [45, 220]],
-    [/wheel\s*bearing/i,    [25, 110]],
-    [/fuel\s*pump/i,        [55, 240]],
-    [/ignition\s*coil/i,    [15, 70]],
-    [/clutch/i,             [80, 350]],
-    [/tire/i,               [65, 260]],
-    [/windshield|glass/i,   [110, 420]],
-    [/exhaust|muffler/i,    [45, 260]],
-    [/transmission/i,       [350, 1800]],
-    [/engine/i,             [700, 3200]],
-  ];
-  const DEFAULT_RANGE = [30, 180];
-
-  function priceRangeFor(partText){
-    for(const [re, range] of PART_PRICES){ if(re.test(partText)) return range; }
-    return DEFAULT_RANGE;
-  }
-
-  // seeded PRNG so identical searches give identical results
-  function makeRng(seedStr){
-    let h = 1779033703 ^ seedStr.length;
-    for (let i=0;i<seedStr.length;i++){
-      h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353);
-      h = (h << 13) | (h >>> 19);
-    }
-    return function(){
-      h = Math.imul(h ^ (h >>> 16), 2246822507);
-      h = Math.imul(h ^ (h >>> 13), 3266489909);
-      h ^= h >>> 16;
-      return (h >>> 0) / 4294967296;
-    };
-  }
-
-  const CONDITIONS = [
-    {label:"New OEM", mult:[0.95,1.25], weight:.9},
-    {label:"New Aftermarket", mult:[0.55,0.9], weight:.75},
-    {label:"Refurbished", mult:[0.4,0.65], weight:.6},
-    {label:"Used", mult:[0.25,0.5], weight:.45},
   ];
 
   let currentResults = [];
@@ -542,12 +490,19 @@
     document.getElementById('grid').innerHTML = '';
     document.getElementById('empty').classList.remove('active');
 
+    const params = new URLSearchParams({ year, make, model, part, condition: conditionPref });
+    const fetchPromise = fetch(`/api/search?${params}`).then(async (res)=>{
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error || 'Search failed');
+      return data;
+    });
+
     const status = document.getElementById('scanStatus');
     status.classList.add('active');
     status.innerHTML = '';
     const steps = RETAILERS.map(r => r.name);
     let i = 0;
-    const interval = setInterval(()=>{
+    const interval = setInterval(async ()=>{
       if(i < steps.length){
         const line = document.createElement('div');
         line.className = 'scan-line';
@@ -558,11 +513,21 @@
       } else {
         clearInterval(interval);
         status.classList.remove('active');
-        finishSearch(year, make, model, part, conditionPref);
+        try{
+          const data = await fetchPromise;
+          finishSearch(year, make, model, part, data.results);
+        }catch(err){
+          showError(err.message);
+        }
         btn.disabled = false;
         btn.textContent = "Find Parts";
       }
     }, 140);
+  }
+
+  function showError(message){
+    document.getElementById('empty').classList.add('active');
+    document.getElementById('empty').textContent = message || "Something went wrong fetching live listings — try again.";
   }
 
   function shake(){
@@ -576,42 +541,10 @@
     }, 40);
   }
 
-  function finishSearch(year, make, model, part, conditionPref){
-    const seed = `${year}|${make}|${model}|${part}`.toLowerCase();
-    const rng = makeRng(seed);
-    const [lo, hi] = priceRangeFor(part);
-
-    // pick 6-8 retailers
-    const shuffled = [...RETAILERS].sort(()=>rng()-0.5);
-    const count = 6 + Math.floor(rng()*3);
-    const chosen = shuffled.slice(0, count);
-
-    let results = chosen.map(r=>{
-      let cond = CONDITIONS[Math.floor(rng()*CONDITIONS.length)];
-      // salvage yards skew used
-      if(r.tag === 'salvage') cond = CONDITIONS[3 + Math.floor(rng()*1)] || CONDITIONS[3];
-      const [mLo, mHi] = cond.mult;
-      const base = lo + rng()*(hi-lo);
-      let price = base * (mLo + rng()*(mHi-mLo));
-      price = Math.max(4, Math.round(price*100)/100);
-      const origPrice = rng() > 0.65 ? Math.round(price * (1.1 + rng()*0.25) * 100)/100 : null;
-      const rating = Math.round((3.0 + rng()*2.0) * 10)/10;
-      const reviews = Math.floor(20 + rng()*3200);
-      const shipDays = r.shipMin + Math.floor(rng()*(r.shipMax-r.shipMin+1));
-      const reliability = Math.min(1, (r.trust*0.6 + (rating/5)*0.3 + cond.weight*0.1));
-      return {
-        retailer: r.name, tag:r.tag, condition: cond.label, price, origPrice,
-        rating, reviews, shipDays, reliability,
-      };
-    });
-
-    if(conditionPref === 'new') results = results.filter(x=>x.condition.startsWith('New'));
-    if(conditionPref === 'oem') results = results.filter(x=>x.condition === 'New OEM');
-    if(conditionPref === 'used') results = results; // no filter, used already included
-
-    if(results.length === 0){
+  function finishSearch(year, make, model, part, results){
+    if(!results || results.length === 0){
       document.getElementById('empty').classList.add('active');
-      document.getElementById('empty').textContent = "No matches for that condition filter — try loosening it.";
+      document.getElementById('empty').textContent = "No matches found — try a different part name or loosen the condition filter.";
       return;
     }
 
@@ -626,7 +559,7 @@
     currentResults = results;
     const vehicleLabel = [year, make, model].filter(Boolean).join(' ');
     document.getElementById('resultsTitle').textContent = `${results.length} matches — ${part}`;
-    document.getElementById('resultsSub').innerHTML = `for <b>${vehicleLabel}</b>, sorted across ${results.length} sources`;
+    document.getElementById('resultsSub').innerHTML = `for <b>${vehicleLabel}</b>, sorted across ${results.length} eBay listings`;
     document.getElementById('resultsHead').classList.add('active');
 
     renderGauge(results);
@@ -685,6 +618,7 @@
       card.innerHTML = `
         ${badge}
         <div class="retailer">${r.retailer}</div>
+        <div class="item-title"></div>
         <div class="condition">${r.condition}</div>
         <div class="price-row">
           <span class="price">$${r.price.toFixed(2)}</span>
@@ -694,8 +628,14 @@
           <span class="stars">${stars} <span style="color:var(--text-dim)">(${r.reviews.toLocaleString()})</span></span>
           <span class="shipping">${shipLabel}</span>
         </div>
-        <button class="card-btn">View at ${r.retailer.split(' ')[0]}</button>
+        <button class="card-btn">View at eBay</button>
       `;
+      // set via DOM properties, not the template above, since these come from
+      // third-party listing data rather than our own known-safe strings
+      card.querySelector('.item-title').textContent = r.title || '';
+      card.querySelector('.card-btn').addEventListener('click', ()=>{
+        if(r.url) window.open(r.url, '_blank', 'noopener');
+      });
       grid.appendChild(card);
     });
     grid.classList.add('active');
