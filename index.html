@@ -109,6 +109,32 @@
   }
   .field input:focus, .field select:focus{ border-bottom-color:var(--amber); }
   .field input::placeholder{ color:var(--text-faint); }
+  .field select:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .field-autocomplete{ position:relative; }
+  .autocomplete-list{
+    display:none;
+    position:absolute;
+    top:100%;
+    left:0; right:0;
+    background:var(--panel-raised);
+    border:1px solid var(--border);
+    border-top:none;
+    border-radius:0 0 3px 3px;
+    max-height:220px;
+    overflow-y:auto;
+    z-index:20;
+  }
+  .autocomplete-item{
+    padding:9px 12px;
+    font-size:13.5px;
+    color:var(--text);
+    cursor:pointer;
+  }
+  .autocomplete-item:hover, .autocomplete-item.highlighted{
+    background:var(--panel);
+    color:var(--amber);
+  }
 
   .search-btn{
     grid-column:span 1;
@@ -390,19 +416,29 @@
     <div class="form-grid">
       <div class="field">
         <label for="year">Year</label>
-        <input id="year" type="text" placeholder="2016" inputmode="numeric" maxlength="4">
+        <select id="year">
+          <option value="">Year</option>
+        </select>
       </div>
       <div class="field">
         <label for="make">Make</label>
-        <input id="make" type="text" placeholder="Honda">
+        <select id="make">
+          <option value="">Select make</option>
+          <optgroup label="Popular Makes" id="popularMakesGroup"></optgroup>
+          <optgroup label="All Makes" id="allMakesGroup"></optgroup>
+        </select>
       </div>
       <div class="field">
         <label for="model">Model</label>
-        <input id="model" type="text" placeholder="Civic">
+        <select id="model" disabled>
+          <option value="">Select a make first</option>
+        </select>
+        <input id="modelManual" type="text" placeholder="Model" style="display:none;">
       </div>
-      <div class="field">
+      <div class="field field-autocomplete">
         <label for="part">Part Needed</label>
-        <input id="part" type="text" placeholder="Front brake pads">
+        <input id="part" type="text" placeholder="Front brake pads" autocomplete="off">
+        <div class="autocomplete-list" id="partSuggestions"></div>
       </div>
     </div>
     <div class="form-grid" style="margin-top:16px; grid-template-columns:1.4fr 1fr;">
@@ -467,13 +503,205 @@
 
   const API_BASE = "https://scour-0gv7.onrender.com";
 
+  const POPULAR_MAKES = ["Toyota","Honda","Ford","Chevrolet","Nissan","Jeep","Hyundai","Kia","Subaru","GMC"];
+  const ALL_MAKES = [
+    "Acura","Alfa Romeo","Audi","BMW","Buick","Cadillac","Chevrolet","Chrysler","Dodge","Fiat","Ford",
+    "Genesis","GMC","Honda","Hummer","Hyundai","Infiniti","Jaguar","Jeep","Kia","Land Rover","Lexus",
+    "Lincoln","Maserati","Mazda","Mercedes-Benz","Mercury","Mini","Mitsubishi","Nissan","Polestar",
+    "Pontiac","Porsche","Ram","Rivian","Saturn","Scion","Subaru","Tesla","Toyota","Volkswagen","Volvo"
+  ];
+  const PART_SUGGESTIONS = [
+    "Alternator","Battery","Brake Caliper","Brake Pads","Brake Rotors","CV Axle","Catalytic Converter",
+    "Clutch Kit","Control Arm","Fuel Injector","Fuel Pump","Head Gasket","Headlight Assembly",
+    "Ignition Coil","Mass Air Flow Sensor","Muffler","Oil Filter","Oxygen Sensor","Power Steering Pump",
+    "Radiator","Serpentine Belt","Shock Absorber","Spark Plugs","Starter Motor","Strut Assembly",
+    "Tail Light Assembly","Thermostat","Timing Belt","Timing Chain","Transmission","Water Pump",
+    "Wheel Bearing","Windshield Wiper Blades"
+  ];
+
+  const modelCache = {};
+  let modelRequestId = 0;
+
   let currentResults = [];
   let currentSort = "price";
+
+  function populateYears(){
+    const sel = document.getElementById('year');
+    const currentYear = new Date().getFullYear();
+    for(let y = currentYear; y >= 1990; y--){
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      sel.appendChild(opt);
+    }
+  }
+
+  function populateMakes(){
+    const popularGroup = document.getElementById('popularMakesGroup');
+    const allGroup = document.getElementById('allMakesGroup');
+    POPULAR_MAKES.forEach(m=>{
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      popularGroup.appendChild(opt);
+    });
+    [...ALL_MAKES].sort((a,b)=>a.localeCompare(b)).forEach(m=>{
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      allGroup.appendChild(opt);
+    });
+  }
+
+  function setModelOptions(select, placeholder, options){
+    select.innerHTML = '';
+    const placeholderOpt = document.createElement('option');
+    placeholderOpt.value = '';
+    placeholderOpt.textContent = placeholder;
+    select.appendChild(placeholderOpt);
+    options.forEach(m=>{
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      select.appendChild(opt);
+    });
+  }
+
+  function setModelState(state){
+    const select = document.getElementById('model');
+    const manual = document.getElementById('modelManual');
+    select.style.display = '';
+    manual.style.display = 'none';
+    if(state === 'disabled'){
+      select.disabled = true;
+      setModelOptions(select, 'Select a make first', []);
+    } else if(state === 'loading'){
+      select.disabled = true;
+      setModelOptions(select, 'Loading models…', []);
+    }
+  }
+
+  function showModelManual(){
+    const select = document.getElementById('model');
+    const manual = document.getElementById('modelManual');
+    select.style.display = 'none';
+    manual.style.display = '';
+    manual.value = '';
+    manual.focus();
+  }
+
+  async function fetchModels(make, year){
+    const key = `${make.toLowerCase()}|${year || ''}`;
+    if(modelCache[key]) return modelCache[key];
+    const url = year
+      ? `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/${encodeURIComponent(make)}/modelyear/${encodeURIComponent(year)}?format=json`
+      : `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/${encodeURIComponent(make)}?format=json`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('NHTSA request failed');
+    const data = await res.json();
+    const names = [...new Set((data.Results || []).map(r => r.Model_Name).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b));
+    modelCache[key] = names;
+    return names;
+  }
+
+  async function updateModels(){
+    const make = document.getElementById('make').value;
+    const year = document.getElementById('year').value;
+    const requestId = ++modelRequestId;
+
+    if(!make){
+      setModelState('disabled');
+      return;
+    }
+
+    setModelState('loading');
+    try{
+      const models = await fetchModels(make, year);
+      if(requestId !== modelRequestId) return;
+      if(models.length === 0){
+        showModelManual();
+        return;
+      }
+      const select = document.getElementById('model');
+      setModelOptions(select, 'Select model', models);
+      select.disabled = false;
+    }catch(err){
+      if(requestId !== modelRequestId) return;
+      showModelManual();
+    }
+  }
+
+  const partInput = document.getElementById('part');
+  const partSuggestionsEl = document.getElementById('partSuggestions');
+  let partMatches = [];
+  let partHighlighted = -1;
+
+  function hidePartSuggestions(){
+    partMatches = [];
+    partHighlighted = -1;
+    partSuggestionsEl.style.display = 'none';
+    partSuggestionsEl.innerHTML = '';
+  }
+
+  function renderPartSuggestions(){
+    partSuggestionsEl.innerHTML = '';
+    partMatches.forEach((s, i)=>{
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item' + (i === partHighlighted ? ' highlighted' : '');
+      item.textContent = s;
+      item.addEventListener('mousedown', (e)=>{
+        e.preventDefault();
+        partInput.value = s;
+        hidePartSuggestions();
+      });
+      partSuggestionsEl.appendChild(item);
+    });
+    partSuggestionsEl.style.display = partMatches.length ? 'block' : 'none';
+  }
+
+  partInput.addEventListener('input', ()=>{
+    const q = partInput.value.trim().toLowerCase();
+    partHighlighted = -1;
+    if(!q){ hidePartSuggestions(); return; }
+    partMatches = PART_SUGGESTIONS.filter(p => p.toLowerCase().includes(q)).slice(0, 8);
+    renderPartSuggestions();
+  });
+
+  partInput.addEventListener('keydown', e=>{
+    if(partMatches.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')){
+      e.preventDefault();
+      partHighlighted += e.key === 'ArrowDown' ? 1 : -1;
+      if(partHighlighted < 0) partHighlighted = partMatches.length - 1;
+      if(partHighlighted >= partMatches.length) partHighlighted = 0;
+      renderPartSuggestions();
+      return;
+    }
+    if(e.key === 'Enter'){
+      if(partMatches.length && partHighlighted >= 0){
+        partInput.value = partMatches[partHighlighted];
+        hidePartSuggestions();
+        return;
+      }
+      hidePartSuggestions();
+      runSearch();
+      return;
+    }
+    if(e.key === 'Escape'){
+      hidePartSuggestions();
+    }
+  });
+
+  partInput.addEventListener('blur', hidePartSuggestions);
+
+  document.getElementById('make').addEventListener('change', updateModels);
+  document.getElementById('year').addEventListener('change', ()=>{
+    if(document.getElementById('make').value) updateModels();
+  });
 
   function runSearch(){
     const year = document.getElementById('year').value.trim();
     const make = document.getElementById('make').value.trim();
-    const model = document.getElementById('model').value.trim();
+    const modelManual = document.getElementById('modelManual');
+    const model = (modelManual.style.display !== 'none' ? modelManual.value : document.getElementById('model').value).trim();
     const part = document.getElementById('part').value.trim();
     const conditionPref = document.getElementById('condition').value;
 
@@ -655,7 +883,10 @@
 
   document.getElementById('empty').classList.add('active');
 
-  ['year','make','model','part'].forEach(id=>{
+  populateYears();
+  populateMakes();
+
+  ['year','make','model','modelManual'].forEach(id=>{
     document.getElementById(id).addEventListener('keydown', e=>{
       if(e.key === 'Enter') runSearch();
     });
