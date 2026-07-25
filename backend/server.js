@@ -63,6 +63,11 @@ function mapItem(item) {
 const app = express();
 app.use(express.static(SITE_ROOT));
 
+app.use('/api', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+});
+
 app.get('/api/search', async (req, res) => {
   const { year = '', make = '', model = '', part = '', condition: conditionPref = 'any' } = req.query;
 

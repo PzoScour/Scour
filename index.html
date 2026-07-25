@@ -465,6 +465,8 @@
     {name:"Riverside Salvage & Auto", trust:0.68, shipMin:0, shipMax:2, tag:"salvage"},
   ];
 
+  const API_BASE = "https://scour-0gv7.onrender.com";
+
   let currentResults = [];
   let currentSort = "price";
 
@@ -491,7 +493,7 @@
     document.getElementById('empty').classList.remove('active');
 
     const params = new URLSearchParams({ year, make, model, part, condition: conditionPref });
-    const fetchPromise = fetch(`/api/search?${params}`).then(async (res)=>{
+    const fetchPromise = fetch(`${API_BASE}/api/search?${params}`).then(async (res)=>{
       const data = await res.json();
       if(!res.ok) throw new Error(data.error || 'Search failed');
       return data;
