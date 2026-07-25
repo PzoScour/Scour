@@ -109,7 +109,7 @@
   }
   .field input:focus, .field select:focus{ border-bottom-color:var(--amber); }
   .field input::placeholder{ color:var(--text-faint); }
-  .field select:disabled{ opacity:.5; cursor:not-allowed; }
+  .field input:disabled, .field select:disabled{ opacity:.5; cursor:not-allowed; }
 
   .field-autocomplete{ position:relative; }
   .autocomplete-list{
@@ -124,6 +124,14 @@
     max-height:220px;
     overflow-y:auto;
     z-index:20;
+  }
+  .autocomplete-group-label{
+    padding:8px 12px 4px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--text-faint);
   }
   .autocomplete-item{
     padding:9px 12px;
@@ -420,20 +428,15 @@
           <option value="">Year</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field field-autocomplete">
         <label for="make">Make</label>
-        <select id="make">
-          <option value="">Select make</option>
-          <optgroup label="Popular Makes" id="popularMakesGroup"></optgroup>
-          <optgroup label="All Makes" id="allMakesGroup"></optgroup>
-        </select>
+        <input id="make" type="text" placeholder="Select or type a make" autocomplete="off">
+        <div class="autocomplete-list" id="makeSuggestions"></div>
       </div>
-      <div class="field">
+      <div class="field field-autocomplete">
         <label for="model">Model</label>
-        <select id="model" disabled>
-          <option value="">Select a make first</option>
-        </select>
-        <input id="modelManual" type="text" placeholder="Model" style="display:none;">
+        <input id="model" type="text" placeholder="Select a make first" autocomplete="off" disabled>
+        <div class="autocomplete-list" id="modelSuggestions"></div>
       </div>
       <div class="field field-autocomplete">
         <label for="part">Part Needed</label>
@@ -536,57 +539,97 @@
     }
   }
 
-  function populateMakes(){
-    const popularGroup = document.getElementById('popularMakesGroup');
-    const allGroup = document.getElementById('allMakesGroup');
-    POPULAR_MAKES.forEach(m=>{
-      const opt = document.createElement('option');
-      opt.value = m; opt.textContent = m;
-      popularGroup.appendChild(opt);
-    });
-    [...ALL_MAKES].sort((a,b)=>a.localeCompare(b)).forEach(m=>{
-      const opt = document.createElement('option');
-      opt.value = m; opt.textContent = m;
-      allGroup.appendChild(opt);
-    });
-  }
+  // Generic autocomplete: a text input backed by a browsable/filterable suggestion
+  // list. getItems(query) returns either {items:[...]} for a flat list or
+  // {groups:[{label, items}]} for a grouped list; empty query means "browse all".
+  function setupAutocomplete({ inputId, listId, getItems, onSelect }){
+    const input = document.getElementById(inputId);
+    const listEl = document.getElementById(listId);
+    let matches = [];
+    let highlighted = -1;
 
-  function setModelOptions(select, placeholder, options){
-    select.innerHTML = '';
-    const placeholderOpt = document.createElement('option');
-    placeholderOpt.value = '';
-    placeholderOpt.textContent = placeholder;
-    select.appendChild(placeholderOpt);
-    options.forEach(m=>{
-      const opt = document.createElement('option');
-      opt.value = m;
-      opt.textContent = m;
-      select.appendChild(opt);
-    });
-  }
-
-  function setModelState(state){
-    const select = document.getElementById('model');
-    const manual = document.getElementById('modelManual');
-    select.style.display = '';
-    manual.style.display = 'none';
-    if(state === 'disabled'){
-      select.disabled = true;
-      setModelOptions(select, 'Select a make first', []);
-    } else if(state === 'loading'){
-      select.disabled = true;
-      setModelOptions(select, 'Loading models…', []);
+    function hide(){
+      matches = [];
+      highlighted = -1;
+      listEl.style.display = 'none';
+      listEl.innerHTML = '';
     }
+
+    function addItem(label){
+      matches.push(label);
+      const el = document.createElement('div');
+      el.className = 'autocomplete-item';
+      el.textContent = label;
+      el.addEventListener('mousedown', (e)=>{
+        e.preventDefault();
+        input.value = label;
+        hide();
+        if(onSelect) onSelect(label);
+      });
+      listEl.appendChild(el);
+    }
+
+    function applyHighlight(){
+      const els = listEl.querySelectorAll('.autocomplete-item');
+      els.forEach((el, i)=>{
+        const on = i === highlighted;
+        el.classList.toggle('highlighted', on);
+        if(on) el.scrollIntoView({ block: 'nearest' });
+      });
+    }
+
+    function refresh(){
+      if(input.disabled){ hide(); return; }
+      listEl.innerHTML = '';
+      matches = [];
+      highlighted = -1;
+      const result = getItems(input.value.trim().toLowerCase());
+      if(result.groups){
+        result.groups.forEach(g=>{
+          if(!g.items.length) return;
+          const header = document.createElement('div');
+          header.className = 'autocomplete-group-label';
+          header.textContent = g.label;
+          listEl.appendChild(header);
+          g.items.forEach(addItem);
+        });
+      } else {
+        (result.items || []).forEach(addItem);
+      }
+      listEl.style.display = matches.length ? 'block' : 'none';
+    }
+
+    input.addEventListener('input', refresh);
+    input.addEventListener('focus', refresh);
+    input.addEventListener('keydown', e=>{
+      if(matches.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')){
+        e.preventDefault();
+        highlighted += e.key === 'ArrowDown' ? 1 : -1;
+        if(highlighted < 0) highlighted = matches.length - 1;
+        if(highlighted >= matches.length) highlighted = 0;
+        applyHighlight();
+        return;
+      }
+      if(e.key === 'Enter'){
+        if(matches.length && highlighted >= 0){
+          input.value = matches[highlighted];
+          hide();
+          if(onSelect) onSelect(matches[highlighted]);
+          return;
+        }
+        hide();
+        runSearch();
+        return;
+      }
+      if(e.key === 'Escape'){ hide(); }
+    });
+    input.addEventListener('blur', hide);
+
+    return { refresh };
   }
 
-  function showModelManual(){
-    const select = document.getElementById('model');
-    const manual = document.getElementById('modelManual');
-    select.style.display = 'none';
-    manual.style.display = '';
-    manual.value = '';
-    manual.focus();
-  }
+  let modelItems = [];
+  let lastMakeValue = '';
 
   async function fetchModels(make, year){
     const key = `${make.toLowerCase()}|${year || ''}`;
@@ -603,105 +646,97 @@
     return names;
   }
 
+  function setModelInputState(state){
+    const input = document.getElementById('model');
+    if(state === 'disabled'){
+      input.disabled = true;
+      input.placeholder = 'Select a make first';
+    } else if(state === 'loading'){
+      input.disabled = true;
+      input.placeholder = 'Loading models…';
+    } else {
+      input.disabled = false;
+      input.placeholder = 'Select or type a model';
+    }
+  }
+
   async function updateModels(){
-    const make = document.getElementById('make').value;
+    const make = document.getElementById('make').value.trim();
     const year = document.getElementById('year').value;
     const requestId = ++modelRequestId;
 
     if(!make){
-      setModelState('disabled');
+      modelItems = [];
+      setModelInputState('disabled');
       return;
     }
 
-    setModelState('loading');
+    setModelInputState('loading');
     try{
       const models = await fetchModels(make, year);
       if(requestId !== modelRequestId) return;
-      if(models.length === 0){
-        showModelManual();
-        return;
-      }
-      const select = document.getElementById('model');
-      setModelOptions(select, 'Select model', models);
-      select.disabled = false;
+      modelItems = models;
+      setModelInputState('ready');
     }catch(err){
       if(requestId !== modelRequestId) return;
-      showModelManual();
+      modelItems = [];
+      setModelInputState('ready');
     }
   }
 
-  const partInput = document.getElementById('part');
-  const partSuggestionsEl = document.getElementById('partSuggestions');
-  let partMatches = [];
-  let partHighlighted = -1;
-
-  function hidePartSuggestions(){
-    partMatches = [];
-    partHighlighted = -1;
-    partSuggestionsEl.style.display = 'none';
-    partSuggestionsEl.innerHTML = '';
+  function onMakeChanged(){
+    const make = document.getElementById('make').value.trim();
+    if(make === lastMakeValue) return;
+    lastMakeValue = make;
+    document.getElementById('model').value = '';
+    updateModels();
   }
 
-  function renderPartSuggestions(){
-    partSuggestionsEl.innerHTML = '';
-    partMatches.forEach((s, i)=>{
-      const item = document.createElement('div');
-      item.className = 'autocomplete-item' + (i === partHighlighted ? ' highlighted' : '');
-      item.textContent = s;
-      item.addEventListener('mousedown', (e)=>{
-        e.preventDefault();
-        partInput.value = s;
-        hidePartSuggestions();
-      });
-      partSuggestionsEl.appendChild(item);
-    });
-    partSuggestionsEl.style.display = partMatches.length ? 'block' : 'none';
-  }
-
-  partInput.addEventListener('input', ()=>{
-    const q = partInput.value.trim().toLowerCase();
-    partHighlighted = -1;
-    if(!q){ hidePartSuggestions(); return; }
-    partMatches = PART_SUGGESTIONS.filter(p => p.toLowerCase().includes(q)).slice(0, 8);
-    renderPartSuggestions();
-  });
-
-  partInput.addEventListener('keydown', e=>{
-    if(partMatches.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')){
-      e.preventDefault();
-      partHighlighted += e.key === 'ArrowDown' ? 1 : -1;
-      if(partHighlighted < 0) partHighlighted = partMatches.length - 1;
-      if(partHighlighted >= partMatches.length) partHighlighted = 0;
-      renderPartSuggestions();
-      return;
-    }
-    if(e.key === 'Enter'){
-      if(partMatches.length && partHighlighted >= 0){
-        partInput.value = partMatches[partHighlighted];
-        hidePartSuggestions();
-        return;
+  setupAutocomplete({
+    inputId: 'make',
+    listId: 'makeSuggestions',
+    getItems(query){
+      if(!query){
+        return { groups: [
+          { label: 'Popular Makes', items: POPULAR_MAKES },
+          { label: 'All Makes', items: [...ALL_MAKES].sort((a,b)=>a.localeCompare(b)) }
+        ]};
       }
-      hidePartSuggestions();
-      runSearch();
-      return;
-    }
-    if(e.key === 'Escape'){
-      hidePartSuggestions();
+      const flat = [...new Set([...POPULAR_MAKES, ...ALL_MAKES])]
+        .filter(m => m.toLowerCase().includes(query))
+        .sort((a,b)=>a.localeCompare(b));
+      return { items: flat };
+    },
+    onSelect(){ onMakeChanged(); }
+  });
+  document.getElementById('make').addEventListener('blur', onMakeChanged);
+
+  setupAutocomplete({
+    inputId: 'model',
+    listId: 'modelSuggestions',
+    getItems(query){
+      if(!query) return { items: modelItems };
+      return { items: modelItems.filter(m => m.toLowerCase().includes(query)) };
     }
   });
 
-  partInput.addEventListener('blur', hidePartSuggestions);
+  setupAutocomplete({
+    inputId: 'part',
+    listId: 'partSuggestions',
+    getItems(query){
+      if(!query) return { items: [] };
+      return { items: PART_SUGGESTIONS.filter(p => p.toLowerCase().includes(query)).slice(0, 8) };
+    }
+  });
 
-  document.getElementById('make').addEventListener('change', updateModels);
   document.getElementById('year').addEventListener('change', ()=>{
-    if(document.getElementById('make').value) updateModels();
+    if(document.getElementById('make').value.trim()) updateModels();
   });
 
   function runSearch(){
     const year = document.getElementById('year').value.trim();
     const make = document.getElementById('make').value.trim();
-    const modelManual = document.getElementById('modelManual');
-    const model = (modelManual.style.display !== 'none' ? modelManual.value : document.getElementById('model').value).trim();
+    const model = document.getElementById('model').value.trim();
     const part = document.getElementById('part').value.trim();
     const conditionPref = document.getElementById('condition').value;
 
@@ -884,12 +919,9 @@
   document.getElementById('empty').classList.add('active');
 
   populateYears();
-  populateMakes();
 
-  ['year','make','model','modelManual'].forEach(id=>{
-    document.getElementById(id).addEventListener('keydown', e=>{
-      if(e.key === 'Enter') runSearch();
-    });
+  document.getElementById('year').addEventListener('keydown', e=>{
+    if(e.key === 'Enter') runSearch();
   });
 </script>
 </body>
