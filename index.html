@@ -672,16 +672,28 @@
     }
 
     setModelInputState('loading');
+    let models = [];
     try{
-      const models = await fetchModels(make, year);
-      if(requestId !== modelRequestId) return;
-      modelItems = models;
-      setModelInputState('ready');
+      models = await fetchModels(make, year);
     }catch(err){
-      if(requestId !== modelRequestId) return;
-      modelItems = [];
-      setModelInputState('ready');
+      models = [];
     }
+    if(requestId !== modelRequestId) return;
+
+    // Some makes/years have sparse or missing NHTSA data for that specific
+    // model year even though the make itself has models — fall back to the
+    // unfiltered make list rather than leaving the dropdown empty.
+    if(models.length === 0 && year){
+      try{
+        models = await fetchModels(make, '');
+      }catch(err){
+        models = [];
+      }
+      if(requestId !== modelRequestId) return;
+    }
+
+    modelItems = models;
+    setModelInputState('ready');
   }
 
   function onMakeChanged(){
