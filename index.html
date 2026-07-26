@@ -114,16 +114,14 @@
   .field-autocomplete{ position:relative; }
   .autocomplete-list{
     display:none;
-    position:absolute;
-    top:100%;
-    left:0; right:0;
+    position:fixed;
     background:var(--panel-raised);
     border:1px solid var(--border);
-    border-top:none;
-    border-radius:0 0 3px 3px;
-    max-height:220px;
+    border-radius:3px;
+    max-height:320px;
     overflow-y:auto;
-    z-index:20;
+    z-index:1000;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
   }
   .autocomplete-group-label{
     padding:8px 12px 4px;
@@ -555,6 +553,27 @@
       listEl.innerHTML = '';
     }
 
+    // Dropdown is position:fixed so it floats above the page instead of
+    // being clipped by the ticket panel's overflow:hidden. Position it
+    // against the input's viewport rect and cap its height to whatever
+    // space is left below before the viewport edge.
+    function positionList(){
+      const rect = input.getBoundingClientRect();
+      const margin = 8;
+      const spaceBelow = window.innerHeight - rect.bottom - margin;
+      listEl.style.left = rect.left + 'px';
+      listEl.style.width = rect.width + 'px';
+      listEl.style.top = rect.bottom + 'px';
+      listEl.style.maxHeight = Math.max(120, Math.min(320, spaceBelow)) + 'px';
+    }
+
+    window.addEventListener('scroll', ()=>{
+      if(listEl.style.display === 'block') positionList();
+    }, true);
+    window.addEventListener('resize', ()=>{
+      if(listEl.style.display === 'block') positionList();
+    });
+
     function addItem(label){
       matches.push(label);
       const el = document.createElement('div');
@@ -596,6 +615,7 @@
       } else {
         (result.items || []).forEach(addItem);
       }
+      if(matches.length) positionList();
       listEl.style.display = matches.length ? 'block' : 'none';
     }
 
