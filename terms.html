@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — Scour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --graphite:#181B1F;
+    --panel:#21252B;
+    --panel-raised:#282D34;
+    --border:#363C44;
+    --amber:#FF9F1C;
+    --amber-dim:#8C5A16;
+    --blueprint:#5B8DEF;
+    --green:#4CAF6D;
+    --red:#E1584B;
+    --text:#ECEDEF;
+    --text-dim:#8B92A0;
+    --text-faint:#5C636D;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 1px) 0 0/22px 22px,
+      var(--graphite);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:760px; margin:0 auto;}
+
+  .ticket{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:4px;
+    position:relative;
+    padding:28px 32px 24px;
+    margin-bottom:28px;
+    overflow:hidden;
+  }
+  .ticket::before{
+    content:'';
+    position:absolute; left:0; top:0; bottom:0; width:6px;
+    background:repeating-linear-gradient(180deg, var(--amber) 0 10px, transparent 10px 20px);
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    color:var(--amber);
+    text-transform:uppercase;
+    margin-bottom:6px;
+    padding-left:14px;
+  }
+  h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:30px;
+    letter-spacing:.01em;
+    text-transform:uppercase;
+    padding-left:14px;
+    margin-bottom:4px;
+  }
+  .subtitle{
+    color:var(--text-dim);
+    font-size:14px;
+    padding-left:14px;
+    max-width:560px;
+  }
+
+  .meta-line{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--text-faint);
+    margin-bottom:20px;
+  }
+
+  .legal-content h2{
+    font-family:'Oswald',sans-serif;
+    font-size:18px;
+    font-weight:600;
+    letter-spacing:.01em;
+    text-transform:uppercase;
+    color:var(--text);
+    margin:28px 0 10px;
+  }
+  .legal-content h2:first-child{ margin-top:0; }
+  .legal-content p{
+    font-size:14px;
+    line-height:1.65;
+    color:var(--text-dim);
+    margin-bottom:12px;
+  }
+  .legal-content ul{
+    margin:0 0 12px 20px;
+    color:var(--text-dim);
+    font-size:14px;
+    line-height:1.65;
+  }
+  .legal-content li{ margin-bottom:6px; }
+  .legal-content strong{ color:var(--text); }
+  .legal-content a{ color:var(--blueprint); }
+
+  .callout{
+    margin:20px 0;
+    padding:14px 18px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:4px;
+    font-size:12.5px;
+    color:var(--text-faint);
+    line-height:1.6;
+  }
+
+  .site-footer{
+    margin-top:40px;
+    padding-top:20px;
+    border-top:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:center;
+    text-align:center;
+  }
+  .footer-links{
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+    justify-content:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+  }
+  .footer-links a{ color:var(--text-dim); text-decoration:none; transition:color .12s; }
+  .footer-links a:hover{ color:var(--amber); }
+  .footer-copy{ color:var(--text-faint); font-size:11.5px; max-width:560px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="ticket">
+    <div class="eyebrow">Legal · Terms of Service</div>
+    <h1>Terms of Service</h1>
+    <p class="subtitle">The rules for using Scour to compare part prices across retailers.</p>
+  </div>
+
+  <div class="meta-line">Effective: July 26, 2026</div>
+
+  <div class="legal-content">
+    <h2>1. What Scour Is</h2>
+    <p>Scour ("Scour," "we," "us") is a price-comparison tool for automotive parts. You enter a vehicle and a part, and Scour searches listings from third-party retailers and marketplaces (currently eBay, with additional sources planned) and displays their prices, condition, and availability side by side.</p>
+    <p><strong>Scour does not sell parts, process payments, or fulfill orders.</strong> Every purchase happens on the third-party retailer's own website, under that retailer's own terms and policies. Clicking "View at [Retailer]" takes you off Scour to complete any transaction.</p>
+
+    <h2>2. Third-Party Retailers &amp; Listings</h2>
+    <p>Prices, availability, condition, shipping estimates, and seller ratings shown on Scour are pulled from third-party APIs and may change or go out of date between when Scour displays them and when you reach the retailer's site. Scour does not control, verify, or guarantee the accuracy of any listing.</p>
+    <p>You should confirm final price, availability, fitment, and condition on the retailer's own site before completing a purchase. Any dispute about an order — pricing errors, shipping, returns, defective parts, fraud — is between you and that retailer, not Scour.</p>
+
+    <h2>3. Affiliate Relationships</h2>
+    <p>Scour participates in affiliate programs and may earn a commission when you click through and make a qualifying purchase, at no additional cost to you. See our <a href="/disclosure">Affiliate Disclosure</a> for details. Affiliate relationships do not influence how results are ranked or displayed.</p>
+
+    <h2>4. Acceptable Use</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>Use automated tools (scrapers, bots) to extract data from Scour at scale without permission;</li>
+      <li>Interfere with or disrupt the operation of the site or the APIs it depends on;</li>
+      <li>Use Scour for any unlawful purpose or in violation of any third-party retailer's terms of service.</li>
+    </ul>
+
+    <h2>5. No Warranty</h2>
+    <p>Scour is provided "as is" and "as available," without warranties of any kind, express or implied, including warranties of accuracy, completeness, merchantability, fitness for a particular purpose, or non-infringement. We do not warrant that results are error-free, that any listed price or availability is current, or that the service will be uninterrupted or secure.</p>
+
+    <h2>6. Limitation of Liability</h2>
+    <p>To the fullest extent permitted by law, Scour and its operator will not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenue, arising out of or related to your use of Scour or any transaction with a third-party retailer, even if advised of the possibility of such damages. Scour's total liability for any claim arising from your use of the service is limited to the greater of $50 or the amount (if any) you paid to Scour directly, which — since Scour does not currently charge users — is expected to be $0.</p>
+
+    <h2>7. Changes to These Terms</h2>
+    <p>We may update these Terms from time to time. Material changes will be reflected by updating the effective date above. Continued use of Scour after changes take effect constitutes acceptance of the revised Terms.</p>
+
+    <h2>8. Governing Law</h2>
+    <p>These Terms are governed by the laws of the State of Ohio, without regard to its conflict-of-laws principles.</p>
+
+    <h2>9. Contact</h2>
+    <p>Questions about these Terms can be sent to <a href="mailto:Luke.p2009@icloud.com">Luke.p2009@icloud.com</a>.</p>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-links">
+      <a href="/">Scour</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/disclosure">Affiliate Disclosure</a>
+    </div>
+    <div class="footer-copy">Scour is a price-comparison tool and may earn a commission on purchases made through links on this site.</div>
+  </footer>
+
+</div>
+</body>
+</html>

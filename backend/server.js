@@ -61,7 +61,7 @@ function mapItem(item) {
 }
 
 const app = express();
-app.use(express.static(SITE_ROOT));
+app.use(express.static(SITE_ROOT, { extensions: ['html'] }));
 
 app.use('/api', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
