@@ -46,13 +46,33 @@ function isAccessoryTitle(title) {
 // show" isn't good enough — a "Battery" search should return actual batteries,
 // full stop. Keyed by the exact Part Needed value (case-insensitive). Add more
 // parts here as they turn out to need the same treatment.
-// NOTE: "module" is deliberately left out — on hybrid vehicles a "battery
-// module" is a genuine, individually-replaceable segment of the pack (not an
-// accessory), and we have no reliable way from title text alone to tell that
-// apart from an unrelated "current sensor module". The one bad listing we saw
-// in testing ("Battery A Block Module Sensor") is already caught by "sensor".
+// NOTE: "module"/"assembly"/"assy" are deliberately left out — checked against
+// a 10-make sweep (Honda, Toyota, Ford, Chevy, Nissan, Jeep, Subaru, BMW,
+// Prius, Hyundai) and both words show up constantly on genuine complete
+// batteries (hybrid packs are sold as "Battery Cell Module" or "Battery Pack
+// Assembly"), not just accessories. Same for "hybrid", "vehicle", "voltage",
+// "cell(s)", and brand/spec terms (AGM, Deka, ACDelco, Group ##) — all
+// describe genuine batteries, not sub-components.
 const PART_EXCLUSIONS = {
-  battery: /\b(sensor|cable|harness|terminal|connector|bracket|mount(ing)?s?|hold[\s-]?down|holder)\b/i,
+  // Includes "key fob"/"keyless" because category-6030 filtering isn't
+  // airtight — a keyless-entry fob battery slipped through under it during
+  // testing (Chevy Silverado), the exact failure mode category filtering was
+  // meant to prevent. Also "emergency" — a BMW "330mah Emergency Battery" (an
+  // eCall backup cell, not the car battery) showed up as the cheapest result
+  // for that make during testing. "fuse\w*" (not "fuse(s)?") to also catch
+  // compound listings like "Fuselink". Thermal-management accessories
+  // (cooler/chiller/fan/shield/blower/warmer/blanket) and electrical-junction
+  // accessories (distribution/junction/strap) both turned up repeatedly
+  // across the 10-make sweep as separate parts, not just the battery itself.
+  // "nut"/"bolt" added after a Subaru Outback search returned nothing but a
+  // "Battery Nut" and "Battery Bolt" (hold-down hardware) even at a 100-item
+  // fetch pool — see FALLBACK note below for what happens when exclusion
+  // would otherwise leave zero results.
+  // Deliberately NOT excluding "lead" — "Negative IBS Battery Lead" (a wire
+  // lead) is a real miss, but "lead" is also standard wording in "lead-acid
+  // battery" on genuine listings; excluding it would cost far more than it fixes.
+  battery:
+    /\b(sensors?|cables?|harness(es)?|terminals?|connectors?|brackets?|mount(ing)?s?|hold[\s-]?down|holders?|fuse\w*|trays?|covers?|relays?|chargers?|warmers?|blankets?|tie[\s-]?down|key\s*fob|keyless|emergency|coolers?|chillers?|fans?|shields?|blowers?|distribution|junction|straps?|pads?|nuts?|bolts?)\b/i,
   // "Aftermarket Seats" pulls in seat covers, mounting brackets/adapters, seat
   // belt pads, and power-seat switches that all share the keyword but aren't
   // a seat. Also excludes lug nuts, since "seat" is also the term for a lug
@@ -122,9 +142,16 @@ app.get('/api/search', async (req, res) => {
 
   const query = [year, make, model, part].filter(Boolean).join(' ').trim();
 
+  // Parts with a hard exclusion rule lose a large share of raw results (often
+  // 80%+), so fetch a bigger pool for those — otherwise a run of accessory
+  // listings at the top of eBay's relevance ranking can exclude everything
+  // and return zero results even though genuine matches exist further down.
+  const hasExclusionRule = Boolean(PART_EXCLUSIONS[(part || '').trim().toLowerCase()]);
+  const fetchLimit = hasExclusionRule ? 50 : 24;
+
   let ebayResponse;
   try {
-    ebayResponse = await searchItems(query, { limit: 24, categoryIds: CAR_PARTS_CATEGORY_ID });
+    ebayResponse = await searchItems(query, { limit: fetchLimit, categoryIds: CAR_PARTS_CATEGORY_ID });
   } catch (err) {
     console.error('eBay search failed:', err);
     return res.status(502).json({ error: 'Live eBay search failed — try again in a moment.' });
@@ -132,7 +159,16 @@ app.get('/api/search', async (req, res) => {
 
   let results = (ebayResponse.itemSummaries ?? []).map(mapItem);
 
-  results = results.filter((r) => !isExcludedForPart(part, r.title));
+  // FALLBACK: if every raw result happens to be an accessory (seen on some
+  // vehicles where eBay's relevance ranking is saturated with sensor/bracket
+  // listings from a few high-volume sellers), hard-excluding everything would
+  // show "no matches found" even though the part legitimately exists — worse
+  // than showing unfiltered results. Only fall back to unfiltered when
+  // filtering would otherwise zero out an otherwise non-empty result set.
+  const excludedResults = results.filter((r) => !isExcludedForPart(part, r.title));
+  if (excludedResults.length > 0 || results.length === 0) {
+    results = excludedResults;
+  }
 
   if (conditionPref === 'new') results = results.filter((r) => r.condition.startsWith('New'));
   if (conditionPref === 'oem') results = results.filter((r) => r.condition === 'New OEM');
