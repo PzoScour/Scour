@@ -78,10 +78,12 @@ const PART_EXCLUSIONS = {
   // a seat. Also excludes lug nuts, since "seat" is also the term for a lug
   // nut's conical mating surface (e.g. "Acorn Cone Seat") — a real keyword
   // collision with an unrelated product, not an accessory of the seat itself.
-  'aftermarket seats': /\b(cover(s)?|bracket(s)?|adapter(s)?|pad(s)?|switch(es)?|base(s)?|lug\s*nuts?|acorn)\b/i,
+  // "buckle" added after a seat belt buckle listing won "Cheapest" in production.
+  'aftermarket seats': /\b(cover(s)?|bracket(s)?|adapter(s)?|pad(s)?|switch(es)?|base(s)?|lug\s*nuts?|acorn|buckles?)\b/i,
   // "Sway Bars" pulls in end links (a separate, cheaper suspension part) far
-  // more often than actual bars in real results.
-  'sway bars': /\blinks?\b/i,
+  // more often than actual bars in real results. "bushing" added after
+  // several sway bar bushing listings won "Cheapest" in production.
+  'sway bars': /\b(links?|bushings?)\b/i,
 };
 
 function isExcludedForPart(part, title) {
