@@ -53,6 +53,15 @@ function isAccessoryTitle(title) {
 // in testing ("Battery A Block Module Sensor") is already caught by "sensor".
 const PART_EXCLUSIONS = {
   battery: /\b(sensor|cable|harness|terminal|connector|bracket|mount(ing)?s?|hold[\s-]?down|holder)\b/i,
+  // "Aftermarket Seats" pulls in seat covers, mounting brackets/adapters, seat
+  // belt pads, and power-seat switches that all share the keyword but aren't
+  // a seat. Known gap: a handful of lug nuts get miscategorized here too,
+  // since "seat" is also the term for a lug nut's conical mating surface —
+  // no accessory word to key off, so left unhandled for now.
+  'aftermarket seats': /\b(cover(s)?|bracket(s)?|adapter(s)?|pad(s)?|switch(es)?|base(s)?)\b/i,
+  // "Sway Bars" pulls in end links (a separate, cheaper suspension part) far
+  // more often than actual bars in real results.
+  'sway bars': /\blinks?\b/i,
 };
 
 function isExcludedForPart(part, title) {
