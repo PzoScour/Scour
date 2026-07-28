@@ -913,12 +913,22 @@
     renderGrid(results, 'price');
   }
 
+  // Prefer complete parts over sub-components (sensors, cables, brackets, ...)
+  // when picking Cheapest/Best Value, so a $19 accessory can't outrank the
+  // $200 part it attaches to just because both match the search keyword.
+  // Falls back to the full set if every result is flagged (e.g. searching
+  // for a part whose own name is an "accessory" word, like Mass Air Flow Sensor).
+  function badgePool(results){
+    const nonAccessory = results.filter(r=>!r.isAccessory);
+    return nonAccessory.length ? nonAccessory : results;
+  }
+
   function renderGauge(results){
     const prices = results.map(r=>r.price);
     const min = Math.min(...prices), max = Math.max(...prices);
     const track = document.getElementById('gaugeTrack');
     track.innerHTML = '';
-    const bestValue = [...results].sort((a,b)=>b.value-a.value)[0];
+    const bestValue = [...badgePool(results)].sort((a,b)=>b.value-a.value)[0];
     results.forEach(r=>{
       const pct = max===min ? 50 : ((r.price-min)/(max-min))*100;
       const mark = document.createElement('div');
@@ -939,8 +949,9 @@
       if(sortBy==='value') return b.value-a.value;
       return 0;
     });
-    const cheapest = [...results].sort((a,b)=>a.price-b.price)[0];
-    const bestValue = [...results].sort((a,b)=>b.value-a.value)[0];
+    const pool = badgePool(results);
+    const cheapest = [...pool].sort((a,b)=>a.price-b.price)[0];
+    const bestValue = [...pool].sort((a,b)=>b.value-a.value)[0];
 
     const grid = document.getElementById('grid');
     grid.innerHTML = '';

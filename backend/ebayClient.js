@@ -34,12 +34,13 @@ export async function getAppToken() {
   return cachedToken;
 }
 
-export async function searchItems(query, { limit = 10 } = {}) {
+export async function searchItems(query, { limit = 10, categoryIds } = {}) {
   const token = await getAppToken();
 
   const url = new URL(`https://${EBAY_HOST}/buy/browse/v1/item_summary/search`);
   url.searchParams.set('q', query);
   url.searchParams.set('limit', String(limit));
+  if (categoryIds) url.searchParams.set('category_ids', categoryIds);
 
   const res = await fetch(url, {
     headers: {

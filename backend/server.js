@@ -9,6 +9,12 @@ const SITE_ROOT = path.resolve(__dirname, '..');
 
 const PORT = process.env.PORT || 3000;
 
+// eBay category 6030 = "Car & Truck Parts & Accessories" (under eBay Motors).
+// Restricting search to this category excludes unrelated listings that only
+// match on keyword (e.g. a key fob battery when searching "battery") since
+// they live in an entirely different category tree (Consumer Electronics, etc.)
+const CAR_PARTS_CATEGORY_ID = '6030';
+
 const CONDITION_WEIGHT = {
   'New OEM': 0.9,
   'New Aftermarket': 0.75,
@@ -23,6 +29,17 @@ function bucketCondition(ebayCondition, title) {
   if (c.includes('refurb')) return 'Refurbished';
   if (c.includes('new')) return /\boem\b/i.test(title || '') ? 'New OEM' : 'New Aftermarket';
   return 'Used';
+}
+
+// A listing whose title reads as a sub-component (sensor, cable, bracket, ...)
+// rather than the complete part itself. Same category-6030 relevance, but
+// "Cheapest"/"Best Value" shouldn't crown a $19 sensor over the $200 part it
+// attaches to just because both match the search keyword.
+const ACCESSORY_TITLE_PATTERN =
+  /\b(sensor|cable|harness|terminal|bracket|mount(ing)?s?|tray|cover|connector|adapter|hold[\s-]?down|clip|pigtail|sleeve|module)\b/i;
+
+function isAccessoryTitle(title) {
+  return ACCESSORY_TITLE_PATTERN.test(title || '');
 }
 
 function shipDaysFromOptions(shippingOptions) {
@@ -56,6 +73,7 @@ function mapItem(item) {
     reviews,
     shipDays: shipDaysFromOptions(item.shippingOptions),
     reliability,
+    isAccessory: isAccessoryTitle(item.title),
     url: item.itemWebUrl,
   };
 }
@@ -79,7 +97,7 @@ app.get('/api/search', async (req, res) => {
 
   let ebayResponse;
   try {
-    ebayResponse = await searchItems(query, { limit: 24 });
+    ebayResponse = await searchItems(query, { limit: 24, categoryIds: CAR_PARTS_CATEGORY_ID });
   } catch (err) {
     console.error('eBay search failed:', err);
     return res.status(502).json({ error: 'Live eBay search failed — try again in a moment.' });
