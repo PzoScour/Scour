@@ -42,6 +42,24 @@ function isAccessoryTitle(title) {
   return ACCESSORY_TITLE_PATTERN.test(title || '');
 }
 
+// Per-part-type hard exclusion: for a search this specific, "demote and still
+// show" isn't good enough — a "Battery" search should return actual batteries,
+// full stop. Keyed by the exact Part Needed value (case-insensitive). Add more
+// parts here as they turn out to need the same treatment.
+// NOTE: "module" is deliberately left out — on hybrid vehicles a "battery
+// module" is a genuine, individually-replaceable segment of the pack (not an
+// accessory), and we have no reliable way from title text alone to tell that
+// apart from an unrelated "current sensor module". The one bad listing we saw
+// in testing ("Battery A Block Module Sensor") is already caught by "sensor".
+const PART_EXCLUSIONS = {
+  battery: /\b(sensor|cable|harness|terminal|connector|bracket|mount(ing)?s?|hold[\s-]?down|holder)\b/i,
+};
+
+function isExcludedForPart(part, title) {
+  const pattern = PART_EXCLUSIONS[(part || '').trim().toLowerCase()];
+  return pattern ? pattern.test(title || '') : false;
+}
+
 function shipDaysFromOptions(shippingOptions) {
   const maxDate = shippingOptions?.[0]?.maxEstimatedDeliveryDate;
   if (!maxDate) return 5;
@@ -104,6 +122,8 @@ app.get('/api/search', async (req, res) => {
   }
 
   let results = (ebayResponse.itemSummaries ?? []).map(mapItem);
+
+  results = results.filter((r) => !isExcludedForPart(part, r.title));
 
   if (conditionPref === 'new') results = results.filter((r) => r.condition.startsWith('New'));
   if (conditionPref === 'oem') results = results.filter((r) => r.condition === 'New OEM');
