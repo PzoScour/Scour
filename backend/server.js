@@ -55,10 +55,10 @@ const PART_EXCLUSIONS = {
   battery: /\b(sensor|cable|harness|terminal|connector|bracket|mount(ing)?s?|hold[\s-]?down|holder)\b/i,
   // "Aftermarket Seats" pulls in seat covers, mounting brackets/adapters, seat
   // belt pads, and power-seat switches that all share the keyword but aren't
-  // a seat. Known gap: a handful of lug nuts get miscategorized here too,
-  // since "seat" is also the term for a lug nut's conical mating surface —
-  // no accessory word to key off, so left unhandled for now.
-  'aftermarket seats': /\b(cover(s)?|bracket(s)?|adapter(s)?|pad(s)?|switch(es)?|base(s)?)\b/i,
+  // a seat. Also excludes lug nuts, since "seat" is also the term for a lug
+  // nut's conical mating surface (e.g. "Acorn Cone Seat") — a real keyword
+  // collision with an unrelated product, not an accessory of the seat itself.
+  'aftermarket seats': /\b(cover(s)?|bracket(s)?|adapter(s)?|pad(s)?|switch(es)?|base(s)?|lug\s*nuts?|acorn)\b/i,
   // "Sway Bars" pulls in end links (a separate, cheaper suspension part) far
   // more often than actual bars in real results.
   'sway bars': /\blinks?\b/i,
