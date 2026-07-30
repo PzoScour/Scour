@@ -320,6 +320,8 @@
   }
   .badge.cheapest{ background:var(--green); color:#0a1f10; }
   .badge.bestvalue{ background:var(--amber); color:#1a1300; }
+  /* when a card wins both badges, push the second one to the opposite corner */
+  .badge + .badge{ left:auto; right:14px; }
 
   .retailer{
     font-family:'Oswald',sans-serif;
@@ -504,7 +506,6 @@
   <div class="sortbar" id="sortbar">
     <button class="sort-btn active" data-sort="price">Price: Low to High</button>
     <button class="sort-btn" data-sort="rating">Rating: High to Low</button>
-    <button class="sort-btn" data-sort="value">Best Value</button>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -892,14 +893,6 @@
       return;
     }
 
-    // value score: reliability weighted against price rank
-    const minP = Math.min(...results.map(r=>r.price));
-    const maxP = Math.max(...results.map(r=>r.price));
-    results.forEach(r=>{
-      const priceScore = maxP === minP ? 1 : 1 - (r.price - minP)/(maxP-minP);
-      r.value = priceScore*0.55 + r.reliability*0.45;
-    });
-
     currentResults = results;
     const vehicleLabel = [year, make, model].filter(Boolean).join(' ');
     document.getElementById('resultsTitle').textContent = `${results.length} matches — ${part}`;
@@ -923,12 +916,29 @@
     return nonAccessory.length ? nonAccessory : results;
   }
 
+  // Best Value = whichever item within a small price step of the cheapest
+  // has the most reviews (at the same or higher rating). If the cheapest
+  // item is already the most-reviewed option in that band, it wins both
+  // badges — that's the honest answer, not a bug to work around by forcing
+  // a second, strictly-worse card just to fill the slot.
+  function computeBestValue(pool, cheapest){
+    const step = Math.max(15, cheapest.price * 0.12);
+    const candidates = pool.filter(r => r.price <= cheapest.price + step && r.rating >= cheapest.rating);
+    return [...candidates].sort((a,b)=>{
+      if(b.reviews !== a.reviews) return b.reviews - a.reviews;
+      if(b.rating !== a.rating) return b.rating - a.rating;
+      return a.price - b.price;
+    })[0];
+  }
+
   function renderGauge(results){
     const prices = results.map(r=>r.price);
     const min = Math.min(...prices), max = Math.max(...prices);
     const track = document.getElementById('gaugeTrack');
     track.innerHTML = '';
-    const bestValue = [...badgePool(results)].sort((a,b)=>b.value-a.value)[0];
+    const pool = badgePool(results);
+    const cheapestForGauge = [...pool].sort((a,b)=>a.price-b.price)[0];
+    const bestValue = computeBestValue(pool, cheapestForGauge);
     results.forEach(r=>{
       const pct = max===min ? 50 : ((r.price-min)/(max-min))*100;
       const mark = document.createElement('div');
@@ -946,12 +956,11 @@
     const sorted = [...results].sort((a,b)=>{
       if(sortBy==='price') return a.price-b.price;
       if(sortBy==='rating') return b.rating-a.rating;
-      if(sortBy==='value') return b.value-a.value;
       return 0;
     });
     const pool = badgePool(results);
     const cheapest = [...pool].sort((a,b)=>a.price-b.price)[0];
-    const bestValue = [...pool].sort((a,b)=>b.value-a.value)[0];
+    const bestValue = computeBestValue(pool, cheapest);
 
     const grid = document.getElementById('grid');
     grid.innerHTML = '';
@@ -959,12 +968,12 @@
       const card = document.createElement('div');
       card.className = 'card';
       if(r === cheapest) card.classList.add('cheapest');
-      if(r === bestValue && r !== cheapest) card.classList.add('bestvalue');
+      if(r === bestValue) card.classList.add('bestvalue');
       card.style.animationDelay = (idx*0.03)+'s';
 
       let badge = '';
-      if(r === cheapest) badge = `<div class="badge cheapest">Cheapest</div>`;
-      else if(r === bestValue) badge = `<div class="badge bestvalue">Best Value</div>`;
+      if(r === cheapest) badge += `<div class="badge cheapest">Cheapest</div>`;
+      if(r === bestValue) badge += `<div class="badge bestvalue">Best Value</div>`;
 
       const stars = '★'.repeat(Math.round(r.rating)) + '☆'.repeat(5-Math.round(r.rating));
       const origHtml = r.origPrice ? `<span class="price-orig">$${r.origPrice.toFixed(2)}</span>` : '';
