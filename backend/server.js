@@ -84,6 +84,30 @@ const PART_EXCLUSIONS = {
   // more often than actual bars in real results. "bushing" added after
   // several sway bar bushing listings won "Cheapest" in production.
   'sway bars': /\b(links?|bushings?)\b/i,
+  // "Aftermarket Wheels" pulls in hubcaps/wheel covers (a plastic cap over
+  // the wheel, not the wheel itself) and lug nuts — the same "Aftermarket
+  // Wheels" mislabeling pattern seen during category-filter testing.
+  'aftermarket wheels': /\b(hubcaps?|wheel\s*covers?|lug\s*nuts?)\b/i,
+  // "Downpipe" pulls in generic pipe reducers, heat wrap, and the V-band
+  // flange/clamp adapters used to connect one to a turbo — plus, as a side
+  // effect, some completely mismatched standalone turbocharger listings
+  // that only matched because their title mentions a "mounting flange".
+  // Genuine downpipes in testing started at $68+; every one of the ~10
+  // listings under $40 was one of these, not an actual downpipe.
+  downpipe: /\b(brackets?|reducers?|wraps?|flanges?|clamps?|adapters?)\b/i,
+  // "Timing Belt" pulls in the tensioner, cover bolts, and decorative billet
+  // cover plates, not the belt. Also "serpentine" (a completely different
+  // belt — drives the alternator/AC/power steering, not camshaft timing)
+  // and "chain" (Timing Belt and Timing Chain are separate, listed Part
+  // Needed entries — an engine has one or the other, never both, so a
+  // "Timing Chain Kit" is the wrong part for a Timing Belt search).
+  'timing belt': /\b(tensioners?|bolts?|covers?|serpentine|chains?)\b/i,
+  // "Muffler" pulls in decorative chrome exhaust pipe tips, which are
+  // cosmetic trim, not a functional muffler. Bare "tip" rather than "exhaust
+  // tip" — real listings phrase it "Exhaust Pipe Tip" with a word in between.
+  muffler: /\btips?\b/i,
+  // "Thermostat" pulls in the housing it sits in, not the thermostat itself.
+  thermostat: /\bhousings?\b/i,
 };
 
 function isExcludedForPart(part, title) {
